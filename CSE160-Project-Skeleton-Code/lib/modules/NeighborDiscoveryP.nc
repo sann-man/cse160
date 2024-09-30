@@ -11,7 +11,10 @@ module NeighborDiscoveryP {
 implementation {
     
     // Packet of type pack from packet.h
-    pack sendPackage;
+    pack sendPackage; 
+
+    // sequence number
+    uint16_t seqNum = 0; 
 
     // Neighbor table declaration and count of neighbors
     neighbor_t neighborTable[MAX_NEIGHBORS]; 
@@ -22,7 +25,7 @@ implementation {
     bool neighborDiscoveryStarted = FALSE; 
     command error_t NeighborDiscovery.start() {
         neighborDiscoveryStarted = TRUE; 
-        dbg("NeighborDiscovery", "NeighborDiscovery started\n");
+        dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery started\n");
         
         call NeighborDiscoveryTimer.startPeriodic(50000); 
         return SUCCESS; 
@@ -30,12 +33,13 @@ implementation {
 
     // ----- Timer fired ---  // 
     event void NeighborDiscoveryTimer.fired() {
-        dbg("NeighborDiscovery", "Sending package\n");
+        dbg(NEIGHBOR_CHANNEL, "Sending request package\n");
         
         // Prepare HELLO message
         sendPackage.src = TOS_NODE_ID;
         sendPackage.dest = AM_BROADCAST_ADDR;
-        sendPackage.seq = 0;
+        // sequence number incremented in the SimpleSendP
+        sendPackage.seq = seqNum++;
         sendPackage.TTL = 1;
         sendPackage.type = TYPE_REQUEST; 
         sendPackage.protocol = PROTOCOL_PING;
@@ -43,17 +47,18 @@ implementation {
 
         // Send the package
         if (call Sender.send(sendPackage, AM_BROADCAST_ADDR) == SUCCESS) {
-            dbg("NeighborDiscovery", "Request package sent successfully\n");
+            dbg(NEIGHBOR_CHANNEL, "Request package sent successfully\n");
+            dbg(NEIGHBOR_CHANNEL, "sequence number: %d\n", sendPackage.seq); 
         } else {
-            dbg("NeighborDiscovery", "Failed to send package\n");
+            dbg(NEIGHBOR_CHANNEL, "Failed to send package\n");
         }
     } 
 
     command void NeighborDiscovery.checkStartStatus() {
         if (neighborDiscoveryStarted) {
-            dbg("NeighborDiscovery", "NeighborDiscovery has been started.\n");  
+            dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery has been started.\n");  
         } else {
-            dbg("NeighborDiscovery", "NeighborDiscovery has not been started.\n");
+            dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery has not been started.\n");
         }
     }
 
@@ -79,9 +84,9 @@ implementation {
             table[*countPtr].linkQuality = quality;
             table[*countPtr].isActive = ACTIVE;
             (*countPtr)++;
-            dbg("NeighborDiscovery", "Neighbor added: ID = 0%d, Quality = %d\n", id, quality ); 
+            dbg(NEIGHBOR_CHANNEL, "Neighbor added: ID = 0%d, Quality = %d\n", id, quality ); 
         } else { 
-            dbg("NeighborDiscovery", "Neighbor table is full\n"); 
+            dbg(NEIGHBOR_CHANNEL, "Neighbor table is full\n"); 
         }
     }
 
@@ -93,7 +98,7 @@ implementation {
         for(i = 0; i < *countPtr; i++){ 
             if(table[i].isActive == INACTIVE){ 
                 table[i].isActive = INACTIVE;  
-                dbg("Neighbor discovery", "Neighbor %d removed from ACTIVE list",id); 
+                dbg(NEIGHBOR_CHANNEL, "Neighbor %d removed from ACTIVE list",id); 
                 return; 
             }
         }
@@ -105,5 +110,7 @@ implementation {
         removeNeighbor(neighborTable, &count, id); 
         
     }
+
+
 
 }

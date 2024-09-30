@@ -125,6 +125,12 @@ implementation{
          // This coppies the data we have in our message to this new packet type.
          *msg = *message;
 
+         // ----- seq num ---- // 
+         // get seq from package header given by pack 
+         // msg->seq = sequenceNum++; 
+         // dbg(NEIGHBOR_CHANNEL, "sequence number is %d\n", sequenceNum); 
+
+
          // Attempt to send the packet.
          if(call AMSend.send(dest, &pkt, sizeof(pack)) ==SUCCESS){
             // See AMSend.sendDone(msg, error) to see what happens after.

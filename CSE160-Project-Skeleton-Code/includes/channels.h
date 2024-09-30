@@ -7,7 +7,7 @@ char COMMAND_CHANNEL[]="command";
 char GENERAL_CHANNEL[]="general";
 
 // Project 1
-char NEIGHBOR_CHANNEL[]="neighbor";
+char NEIGHBOR_CHANNEL[]="NeighborDiscovery";
 char FLOODING_CHANNEL[]="flooding";
 
 // Project 2

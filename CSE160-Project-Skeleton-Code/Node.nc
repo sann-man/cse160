@@ -31,26 +31,28 @@ implementation{
    pack sendPackage;
 
    // Prototypes
-   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t type, uint8_t *payload, uint8_t length);
+   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
    event void Boot.booted(){
       call AMControl.start();
 
-      dbg(GENERAL_CHANNEL, "Booted\n");
+      // booted 
+      // dbg(GENERAL_CHANNEL, "Booted\n");
 
       // neighbor discovery start 
       if (call NeighborDiscovery.start() == SUCCESS) { 
-         dbg("NeighborDiscovery", "NeighborDiscovery start command was successful.\n");
+         dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery start command was successful.\n");
       } 
       else {
-        dbg("NeighborDiscovery", "NeighborDiscovery start command failed.\n");
+        dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery start command failed.\n");
       }
       
    }
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
-         dbg(GENERAL_CHANNEL, "Radio On\n");
+         // radio on
+         // dbg(GENERAL_CHANNEL, "Radio On\n");
       }else{
          //Retry until successful
          call AMControl.start();
@@ -76,30 +78,38 @@ implementation{
    // Send reply packet 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
       pack* myMsg = (pack*) payload; 
+
+      if (myMsg->type == TYPE_REPLY) { 
+         dbg(GENERAL_CHANNEL, "Received Reply payload: %s from %d\n", myMsg->payload, myMsg->src);
+      }
+
+
       if (myMsg->type == TYPE_REQUEST) {
-         dbg(GENERAL_CHANNEL, "Received package payload %s from %d\n", myMsg -> payload, myMsg->src);
+         dbg(GENERAL_CHANNEL, "Received request payload %s from %d\n", myMsg -> payload, myMsg->src);
 
          // Send reply message 
+         // gets package header info from Discovery packet made in P file
          sendPackage.src = TOS_NODE_ID; 
-         sendPackage.dest = TOS_NODE_ID; 
+         sendPackage.dest = myMsg->src; 
          sendPackage.type = TYPE_REPLY; 
+         sendPackage.seq = myMsg->seq; 
          sendPackage.protocol = PROTOCOL_PING; 
-         memcpy(sendPackage.payload, "reply", 5); 
+         memcpy(sendPackage.payload, "reply", 6); 
 
-         if (call Sender.send(sendPackage, TOS_NODE_ID) == SUCCESS) { 
-            dbg(GENERAL_CHANNEL, "reply message sent successfully from %d\n", myMsg->src); 
+         if (call Sender.send(sendPackage, myMsg->src) == SUCCESS) { 
+            dbg(GENERAL_CHANNEL, "reply message sent successfully from %d with seq num of %d\n", myMsg->src, sendPackage.seq); 
+            // dbg(GENERAL_CHANNEL, "Sending message with type: %d (expected: %d)\n", sendPackage.type, TYPE_REPLY);
+
          }
          else { 
             // Link might be INACTIVE
             dbg(GENERAL_CHANNEL, "reply message failed to send, node may be in Active\n"); 
          }
 
-
          call NeighborDiscovery.handleNeighbor(myMsg->src, 100); // Call a NeighborDiscovery command
-
-
          
       }
+
       return msg;
    }
 
@@ -125,7 +135,7 @@ implementation{
 
    event void CommandHandler.setAppClient(){}
 
-   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t type, uint8_t* payload, uint8_t length){
+   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;
       Package->dest = dest;
       Package->TTL = TTL;
