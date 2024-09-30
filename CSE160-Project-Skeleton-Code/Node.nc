@@ -12,6 +12,7 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
+#include "includes/NeighborTable.h"
 
 module Node{
    uses interface Boot;
@@ -81,6 +82,8 @@ implementation{
 
       if (myMsg->type == TYPE_REPLY) { 
          dbg(GENERAL_CHANNEL, "Received Reply payload: %s from %d\n", myMsg->payload, myMsg->src);
+
+         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); 
       }
 
 
@@ -94,10 +97,10 @@ implementation{
          sendPackage.type = TYPE_REPLY; 
          sendPackage.seq = myMsg->seq; 
          sendPackage.protocol = PROTOCOL_PING; 
-         memcpy(sendPackage.payload, "reply", 6); 
+         memcpy(sendPackage.payload, "REPLY", 8); 
 
          if (call Sender.send(sendPackage, myMsg->src) == SUCCESS) { 
-            dbg(GENERAL_CHANNEL, "reply message sent successfully from %d with seq num of %d\n", myMsg->src, sendPackage.seq); 
+            dbg(GENERAL_CHANNEL, "Reply message sent from %d from seq: %d\n", myMsg->src, sendPackage.seq); 
             // dbg(GENERAL_CHANNEL, "Sending message with type: %d (expected: %d)\n", sendPackage.type, TYPE_REPLY);
 
          }
@@ -106,7 +109,9 @@ implementation{
             dbg(GENERAL_CHANNEL, "reply message failed to send, node may be in Active\n"); 
          }
 
-         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); // Call a NeighborDiscovery command
+         // quality set to 100 right now...
+         // quality = TPR / TPS 
+         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); 
          
       }
 
