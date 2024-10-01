@@ -8,12 +8,11 @@
 
 #include "protocol.h"
 #include "channels.h"
-// Include message type from ReQRep
 #include "MessageType.h"
 
 enum{
 	// had to adjust packet header size becasue I was getting a segmentation fault
-	PACKET_HEADER_LENGTH = 9,
+	PACKET_HEADER_LENGTH = 10,
 	PACKET_MAX_PAYLOAD_SIZE = 28 - PACKET_HEADER_LENGTH,
 	MAX_TTL = 15
 };
@@ -25,7 +24,8 @@ typedef nx_struct pack{
 	nx_uint16_t seq;	//Sequence Number
 	nx_uint8_t TTL;		//Time to Live
 	nx_uint8_t protocol;
-	nx_uint8_t type; 
+	nx_uint8_t type; // Will be used as type (reply or request) for neighbor and Flood Src for flooding
+	nx_uint8_t fdest; // Flood Destination
 	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
 }pack;
 
@@ -36,8 +36,8 @@ typedef nx_struct pack{
  * 		pack *input = pack to be printed.
  */
 void logPack(pack *input){
-	dbg(GENERAL_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu Type:%hhu Payload: %s\n",
-	input->src, input->dest, input->seq, input->TTL, input->protocol, input->type, input->payload);
+	dbg(GENERAL_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu Type:%hhu Fdest:%hhu Payload: %s\n",
+	input->src, input->dest, input->seq, input->TTL, input->protocol, input->type,input->fdest, input->payload);
 }
 
 enum{

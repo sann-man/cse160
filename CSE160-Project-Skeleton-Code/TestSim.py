@@ -133,24 +133,22 @@ def main():
     s = TestSim()
     s.runTime(10)
     s.loadTopo("long_line.topo")
-
     s.loadNoise("no_noise.txt")
     s.bootAll()
     s.addChannel(s.COMMAND_CHANNEL)
     s.addChannel(s.GENERAL_CHANNEL) 
-    s.addChannel(s.NEIGHBOR_CHANNEL)
+    s.addChannel(s.NEIGHBOR_CHANNEL) 
+    s.addChannel(s.FLOODING_CHANNEL)
 
     # run for a short time to see boot output
-    s.runTime(20)
+    s.runTime(10)
     print("All nodes have been booted and channels added.")
     
     #send a command or ping to check for response
-    # s.ping(1,2 , "Hello, World")
-    # s.runTime(10)
-    # s.ping(1, 3, "Hi!") #not recieved because no neighbor
-    # s.runTime(20)
-
-
+    s.ping(1,2 , "Hello, World")
+    s.runTime(10)
+    s.ping(1, 3, "Hi!") #not recieved because no neighbor
+    s.runTime(20)
 
     
 

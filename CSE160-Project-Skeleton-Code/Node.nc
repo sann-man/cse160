@@ -12,48 +12,59 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
-#include "includes/NeighborTable.h"
 
 module Node{
    uses interface Boot;
 
    uses interface SplitControl as AMControl;
    uses interface Receive;
-
    uses interface SimpleSend as Sender;
-
    uses interface CommandHandler;
-
    uses interface NeighborDiscovery; 
    uses interface Flooding; 
 }
 
 implementation{
    pack sendPackage;
+   pack floodMsg;
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-   event void Boot.booted(){
+   event void Boot.booted() {
       call AMControl.start();
 
-      // booted 
-      // dbg(GENERAL_CHANNEL, "Booted\n");
+      dbg(GENERAL_CHANNEL, "Booted\n");
 
       // neighbor discovery start 
       if (call NeighborDiscovery.start() == SUCCESS) { 
-         dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery start command was successful.\n");
-      } 
-      else {
-        dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery start command failed.\n");
+         dbg("NeighborDiscovery", "NeighborDiscovery start command was successful.\n");
+      } else {
+         dbg("NeighborDiscovery", "NeighborDiscovery start command failed.\n");
       }
+
+      // Declare floodMsg variable of type 'pack'
       
+
+      // Prepare a flooding message
+      floodMsg.src = TOS_NODE_ID;
+      floodMsg.dest = 10; // Example destination node
+      floodMsg.TTL = 20;  // Example TTL value
+      floodMsg.protocol = PROTOCOL_PING;  // Example protocol
+      memcpy(floodMsg.payload, "Flooding message", 16);  // Example payload
+
+      // Call Flooding.send() with the message and destination
+      if (call Flooding.send(floodMsg, floodMsg.dest) == SUCCESS) {
+         dbg(FLOODING_CHANNEL, "Flooding started successfully.\n");
+      } else {
+         dbg(FLOODING_CHANNEL, "Failed to start flooding.\n");
+      }
    }
+
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
-         // radio on
-         // dbg(GENERAL_CHANNEL, "Radio On\n");
+         dbg(GENERAL_CHANNEL, "Radio On\n");
       }else{
          //Retry until successful
          call AMControl.start();
@@ -77,59 +88,34 @@ implementation{
    // ------ Neighbor Discovery ---------- // 
    // Received Request packet
    // Send reply packet 
-   neighbor_t neighborTable[MAX_NEIGHBORS];
-   uint8_t count = 0;  // Keep track of the number of neighbors
-
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
       pack* myMsg = (pack*) payload; 
-      uint8_t i; 
-
-      if (myMsg->type == TYPE_REPLY) {
-         dbg(GENERAL_CHANNEL, "Received Reply payload: %s from %d\n", myMsg->payload, myMsg->src);
-
-         call NeighborDiscovery.handleNeighbor(myMsg->src, 100);
-
-         // iterate the neighbor table to find the matching neighbor
-         // for (i = 0; i < count; i++) {
-         //       if (neighborTable[i].neighborID == myMsg->src) {
-         //          neighborTable[i].received++;
-         //          dbg(NEIGHBOR_CHANNEL, "Updated packets received for Neighbor %d: %d\n", myMsg->src, neighborTable[i].received);
-         //          break; // Exit loop once the neighbor is found
-         //       }
-         // }
-      }
-
       if (myMsg->type == TYPE_REQUEST) {
-         dbg(GENERAL_CHANNEL, "Received request payload %s from %d\n", myMsg -> payload, myMsg->src);
+         dbg(NEIGHBOR_CHANNEL, "Received package payload %s from %d\n", myMsg -> payload, myMsg->src);
 
+         // Send reply message 
          sendPackage.src = TOS_NODE_ID; 
          sendPackage.dest = myMsg->src; 
          sendPackage.type = TYPE_REPLY; 
-         sendPackage.seq = myMsg->seq; 
          sendPackage.protocol = PROTOCOL_PING; 
-         memcpy(sendPackage.payload, "REPLY", 8); 
+         memcpy(sendPackage.payload, "reply", 5); 
 
-         if (call Sender.send(sendPackage, myMsg->src) == SUCCESS) { 
-               dbg(GENERAL_CHANNEL, "Reply message sent from %d from seq: %d\n", myMsg->src, sendPackage.seq);
-         } else { 
-               dbg(GENERAL_CHANNEL, "Reply message failed to send, node may be inactive\n"); 
+         if (call Sender.send(sendPackage, TOS_NODE_ID) == SUCCESS) { 
+            dbg(NEIGHBOR_CHANNEL, "reply message sent successfully from %d\n", myMsg->src); 
+         }
+         else { 
+            // Link might be INACTIVE
+            dbg(NEIGHBOR_CHANNEL, "reply message failed to send, node may be in Active\n"); 
          }
 
-         // for (i = 0; i < count; i++) { 
-         //       if (neighborTable[i].neighborID == myMsg->src) { 
-         //          neighborTable[i].sent++; 
-         //          dbg(NEIGHBOR_CHANNEL, "Updated sent count for Neighbor %d: %d\n", myMsg->src, neighborTable[i].sent);
-         //          break; 
-         //       }
-         // }
 
-         // Handle neighbor information
-         call NeighborDiscovery.handleNeighbor(myMsg->src, 100);
+         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); // Call a NeighborDiscovery command
+
+
+         
       }
-
       return msg;
    }
-
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
@@ -153,12 +139,14 @@ implementation{
 
    event void CommandHandler.setAppClient(){}
 
-   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
+   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload,  uint8_t length){
       Package->src = src;
       Package->dest = dest;
       Package->TTL = TTL;
       Package->seq = seq;
       Package->protocol = protocol;
+      // Package->type = type;
+      // Package-> fdest = fdest;
       memcpy(Package->payload, payload, length);
    }
 }
