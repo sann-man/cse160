@@ -8,7 +8,8 @@
 
 #include "protocol.h"
 #include "channels.h"
-#include "ReQRep.h"
+// Include message type from ReQRep
+#include "MessageType.h"
 
 enum{
 	// had to adjust packet header size becasue I was getting a segmentation fault

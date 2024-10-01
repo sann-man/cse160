@@ -11,8 +11,8 @@ typedef struct {
     uint8_t linkQuality;  // TPR / TRS
     uint16_t isActive;  
     uint16_t lastSeen; 
-    // uint8_t sent; 
-    // uint8_t recieved;
+    uint8_t sent; 
+    uint8_t received;
 
 } neighbor_t;
 

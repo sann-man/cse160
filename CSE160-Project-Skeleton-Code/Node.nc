@@ -77,21 +77,31 @@ implementation{
    // ------ Neighbor Discovery ---------- // 
    // Received Request packet
    // Send reply packet 
+   neighbor_t neighborTable[MAX_NEIGHBORS];
+   uint8_t count = 0;  // Keep track of the number of neighbors
+
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
       pack* myMsg = (pack*) payload; 
+      uint8_t i; 
 
-      if (myMsg->type == TYPE_REPLY) { 
+      if (myMsg->type == TYPE_REPLY) {
          dbg(GENERAL_CHANNEL, "Received Reply payload: %s from %d\n", myMsg->payload, myMsg->src);
 
-         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); 
-      }
+         call NeighborDiscovery.handleNeighbor(myMsg->src, 100);
 
+         // iterate the neighbor table to find the matching neighbor
+         // for (i = 0; i < count; i++) {
+         //       if (neighborTable[i].neighborID == myMsg->src) {
+         //          neighborTable[i].received++;
+         //          dbg(NEIGHBOR_CHANNEL, "Updated packets received for Neighbor %d: %d\n", myMsg->src, neighborTable[i].received);
+         //          break; // Exit loop once the neighbor is found
+         //       }
+         // }
+      }
 
       if (myMsg->type == TYPE_REQUEST) {
          dbg(GENERAL_CHANNEL, "Received request payload %s from %d\n", myMsg -> payload, myMsg->src);
 
-         // Send reply message 
-         // gets package header info from Discovery packet made in P file
          sendPackage.src = TOS_NODE_ID; 
          sendPackage.dest = myMsg->src; 
          sendPackage.type = TYPE_REPLY; 
@@ -100,23 +110,26 @@ implementation{
          memcpy(sendPackage.payload, "REPLY", 8); 
 
          if (call Sender.send(sendPackage, myMsg->src) == SUCCESS) { 
-            dbg(GENERAL_CHANNEL, "Reply message sent from %d from seq: %d\n", myMsg->src, sendPackage.seq); 
-            // dbg(GENERAL_CHANNEL, "Sending message with type: %d (expected: %d)\n", sendPackage.type, TYPE_REPLY);
-
-         }
-         else { 
-            // Link might be INACTIVE
-            dbg(GENERAL_CHANNEL, "reply message failed to send, node may be in Active\n"); 
+               dbg(GENERAL_CHANNEL, "Reply message sent from %d from seq: %d\n", myMsg->src, sendPackage.seq);
+         } else { 
+               dbg(GENERAL_CHANNEL, "Reply message failed to send, node may be inactive\n"); 
          }
 
-         // quality set to 100 right now...
-         // quality = TPR / TPS 
-         call NeighborDiscovery.handleNeighbor(myMsg->src, 100); 
-         
+         // for (i = 0; i < count; i++) { 
+         //       if (neighborTable[i].neighborID == myMsg->src) { 
+         //          neighborTable[i].sent++; 
+         //          dbg(NEIGHBOR_CHANNEL, "Updated sent count for Neighbor %d: %d\n", myMsg->src, neighborTable[i].sent);
+         //          break; 
+         //       }
+         // }
+
+         // Handle neighbor information
+         call NeighborDiscovery.handleNeighbor(myMsg->src, 100);
       }
 
       return msg;
    }
+
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");

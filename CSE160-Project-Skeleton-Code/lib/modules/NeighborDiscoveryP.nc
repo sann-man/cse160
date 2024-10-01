@@ -2,6 +2,7 @@
 #include "../../includes/channels.h"
 #include "../../includes/NeighborTable.h"
 
+
 module NeighborDiscoveryP {
     provides interface NeighborDiscovery;
     uses interface Timer<TMilli> as NeighborDiscoveryTimer;
@@ -27,7 +28,8 @@ implementation {
         neighborDiscoveryStarted = TRUE; 
         dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery started\n");
         
-        call NeighborDiscoveryTimer.startPeriodic(50000); 
+        call NeighborDiscoveryTimer.startPeriodic(5000); 
+        
         return SUCCESS; 
     }
 
@@ -47,26 +49,22 @@ implementation {
         sendPackage.protocol = PROTOCOL_PING;
         memcpy(sendPackage.payload, "REQUEST", 8);
 
+        // increment sent from NeighborTable
         // Send the package
+        // ...
         if (call Sender.send(sendPackage, AM_BROADCAST_ADDR) == SUCCESS) {
             dbg(NEIGHBOR_CHANNEL, "Request package sent from seq: %d\n", sendPackage.seq);
+
         } else {
             dbg(NEIGHBOR_CHANNEL, "Failed to send package\n");
         }
         
+        // neighborTable[].sent++; 
+        // dbg(NEIGHBOR_CHANNEL, "Sent %d", neighborTable.sent); 
+
         // get rid of debug commands
         // call Sender.send(sendPackage, AM_BROADCAST_ADDR); 
     } 
-
-
-    // not necessary
-    // command void NeighborDiscovery.checkStartStatus() {
-    //     if (neighborDiscoveryStarted) {
-    //         dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery has been started.\n");  
-    //     } else {
-    //         dbg(NEIGHBOR_CHANNEL, "NeighborDiscovery has not been started.\n");
-    //     }
-    // }
 
     //  ----------- Neighbor table functionality  ------------------- //
     // Use Node.nc to handle receiving functionality but other functionality will remain here
@@ -109,8 +107,6 @@ implementation {
             dbg(NEIGHBOR_CHANNEL, "Neighbor table is full, and no inactive neighbors found\n");
         }
     }
-
-
 
     // Check if neighbor is INACTIVE
     // Nieghbor can be dead or link is gone ... 
